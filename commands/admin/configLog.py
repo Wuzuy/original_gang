@@ -3,17 +3,8 @@ from discord.ext import commands
 import sqlite3
 from database.database_manager import DB_FILE
 from utils.checks import has_admin_role
+from utils.constants import LOG_TYPES # Importa do novo local
 from ui.base_view import BaseView
-
-LOG_TYPES = {
-    "bot": {"name": "Log do Bot", "column": "log_bot_channel_id", "description": "Logs de comandos e ações do bot."},
-    "canal": {"name": "Log de Canais", "column": "log_channel_channel_id", "description": "Criação, exclusão e edição de canais."},
-    "mensagem": {"name": "Log de Mensagens", "column": "log_message_channel_id", "description": "Mensagens editadas e apagadas."},
-    "cargos": {"name": "Log de Cargos", "column": "log_role_channel_id", "description": "Criação, exclusão e edição de cargos."},
-    "entrada": {"name": "Log de Entrada", "column": "log_join_channel_id", "description": "Registra quando um membro entra no servidor."},
-    "saida": {"name": "Log de Saída", "column": "log_leave_channel_id", "description": "Registra quando um membro sai do servidor."},
-    "moderacao": {"name": "Log de Moderação", "column": "log_moderation_channel_id", "description": "Logs de ban, kick, mute, etc."}
-}
 
 class ConfigLogView(BaseView):
     def __init__(self, author: discord.User, bot_instance, guild: discord.Guild):
@@ -21,6 +12,20 @@ class ConfigLogView(BaseView):
         self.bot_instance = bot_instance
         self.guild = guild
         self.add_item(self.LogTypeSelect())
+        self.add_item(self.BackButton())
+
+    class BackButton(discord.ui.Button):
+        def __init__(self):
+            super().__init__(label="Voltar ao Painel", style=discord.ButtonStyle.danger, row=4)
+
+        async def callback(self, interaction: discord.Interaction):
+            from commands.admin.painel import MainPanelView
+            view: 'ConfigLogView' = self.view # type: ignore
+            main_view = MainPanelView(author=interaction.user, bot_instance=view.bot_instance, guild=view.guild)
+            attachments = []
+            if main_view.original_file:
+                attachments.append(main_view.original_file)
+            await interaction.response.edit_message(embed=main_view.original_embed, view=main_view, attachments=attachments)
 
     async def generate_embed(self) -> discord.Embed:
         embed = self.bot_instance.create_user_embed(self.author, self.guild, "Configure os canais para cada tipo de log.", title="Painel de Configuração de Logs")
@@ -75,6 +80,7 @@ class ConfigLogView(BaseView):
             # Remove os menus de seleção para limpar a view e recria o inicial
             view.clear_items()
             view.add_item(view.LogTypeSelect())
+            view.add_item(view.BackButton())
             await view.update_message(interaction)
 
 class ConfigLog(commands.Cog):

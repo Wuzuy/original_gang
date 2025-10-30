@@ -20,7 +20,7 @@ class RedCommunityBot(commands.Bot):
         intents.message_content = True
         intents.members = True
         
-        super().__init__(command_prefix="r.", intents=intents, help_command=None)
+        super().__init__(command_prefix="og!", intents=intents, help_command=None)
         
         self.super_admin_ids = [884224830998741022, 1308312450650603520, DEVELOPER_ID]
 
@@ -52,7 +52,7 @@ class RedCommunityBot(commands.Bot):
     async def setup_hook(self):
         """Encontra e carrega todas as extensões (cogs) automaticamente."""
         
-        cogs_folders = ["commands", "events", "shake"] 
+        cogs_folders = ["commands", "events", "features"] 
         
         for folder in cogs_folders:
             for root, dirs, files in os.walk(folder):
@@ -335,7 +335,7 @@ class RedCommunityBot(commands.Bot):
         Busca o canal de log apropriado no DB e envia o embed.
         log_type deve ser uma das chaves de LOG_TYPES (ex: 'bot', 'canal', 'mensagem').
         """
-        from commands.geral.configLog import LOG_TYPES # Importação local para evitar dependência circular
+        from utils.constants import LOG_TYPES # Importação do novo local centralizado
         column_name = LOG_TYPES.get(log_type, {}).get("column")
 
         if not column_name:

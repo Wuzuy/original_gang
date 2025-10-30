@@ -3,9 +3,6 @@ from discord.ext import commands
 import sqlite3
 from database.database_manager import DB_FILE
 
-CALL_SERVERS_IDS = [1429978012165738498, 1159197719655616592]
-CHAT_SERVERS_IDS = [1429978012165738498]
-
 async def is_super_admin(ctx: commands.Context) -> bool:
     """Verifica se o autor é um Super Admin (definido no bot.py)."""
     return ctx.author.id in ctx.bot.super_admin_ids
@@ -53,18 +50,3 @@ async def can_moderate(ctx: commands.Context) -> bool:
     """
     # A função has_moderator_role já inclui a verificação de admin.
     return await has_moderator_role(ctx)
-
-
-def is_call_server():
-    """Verifica se o comando foi usado em um servidor de 'call'."""
-    async def predicate(ctx: commands.Context) -> bool:
-        return ctx.guild.id in CALL_SERVERS_IDS
-    predicate.is_sector_check = True # Atributo para identificação
-    return commands.check(predicate)
-
-def is_chat_server():
-    """Verifica se o comando foi usado em um servidor de 'chat'."""
-    async def predicate(ctx: commands.Context) -> bool:
-        return ctx.guild.id in CHAT_SERVERS_IDS
-    predicate.is_sector_check = True # Atributo para identificação
-    return commands.check(predicate)

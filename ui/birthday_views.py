@@ -256,6 +256,19 @@ class AdminBirthdayManagementView(BaseView):
         modal = AdminAddBirthdayModal(self.bot_instance, self.guild)
         await interaction.response.send_modal(modal)
 
+    @discord.ui.button(label="Voltar ao Painel", style=discord.ButtonStyle.danger, row=2)
+    async def go_back(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Retorna ao menu principal do painel."""
+        # Para evitar dependência circular, importamos aqui
+        from commands.admin.painel import MainPanelView
+
+        # Recria a view principal para resetar o estado
+        main_view = MainPanelView(author=self.author, bot_instance=self.bot_instance, guild=self.guild)
+        attachments = []
+        if main_view.original_file:
+            attachments.append(main_view.original_file)
+        await interaction.response.edit_message(embed=main_view.original_embed, view=main_view, attachments=attachments)
+
     @discord.ui.button(label="Remover Aniversário", style=discord.ButtonStyle.danger)
     async def remove_birthday(self, interaction: discord.Interaction, button: discord.ui.Button):
         with sqlite3.connect(DB_FILE) as conn:
