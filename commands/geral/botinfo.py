@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from utils.checks import is_super_admin
 
+#Update
 class BotInfo(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
