@@ -7,7 +7,7 @@ class DM(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
 
-    @commands.command(name="dm")
+    @commands.command(name="dm", help="Envia uma mensagem para todos os membros do servidor.")
     @commands.check(has_admin_role)
     async def dm(self, ctx: commands.Context, *, message: str):
         """Envia uma mensagem para todos os membros do servidor."""
@@ -15,7 +15,7 @@ class DM(commands.Cog):
             await ctx.message.delete()
         except discord.HTTPException: pass
 
-        initial_embed = self.client.create_embed("Preparando Envio...", "Coletando membros e iniciando o processo. Esta mensagem será atualizada com o progresso.", 0x3498db)
+        initial_embed = self.client.create_embed("Preparando Envio...", "Coletando membros e iniciando o processo. Esta mensagem será atualizada com o progresso.", color=0x3498db, guild_id=ctx.guild.id)
         feedback_msg = await ctx.send(embed=initial_embed)
         
         # Chama a função centralizada para fazer o trabalho pesado
@@ -38,7 +38,7 @@ class DM(commands.Cog):
         elif isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
                 f"{ctx.author.mention}, parâmetros do comando inválido.\n"
-                f"Tente: `r.dm <mensagem>`",
+                f"Tente: `{ctx.prefix}dm <mensagem>`",
                 delete_after=10
             )
         else:

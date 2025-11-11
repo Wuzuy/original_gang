@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import sqlite3
 from database.database_manager import DB_FILE
-from utils.checks import CALL_SERVERS_IDS
 
 class MemberEvents(commands.Cog):
     def __init__(self, client: commands.Bot):
@@ -11,9 +10,6 @@ class MemberEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         """Remove o aniversário de um membro se ele sair do servidor."""
-        if member.guild.id not in CALL_SERVERS_IDS:
-            return # Apenas remove aniversários em servidores de call
-
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM birthdays WHERE guild_id = ? AND user_id = ?", (member.guild.id, member.id))

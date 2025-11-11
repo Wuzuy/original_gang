@@ -30,7 +30,8 @@ class BotInfo(commands.Cog):
         embed = self.client.create_embed(
             "Informações do Bot",
             f"O bot está atualmente em `{guild_count}` servidores.\n"
-            f"Ele pode alcançar `{member_count}` membros únicos com DMs globais."
+            f"Ele pode alcançar `{member_count}` membros únicos com DMs globais.",
+            guild_id=ctx.guild.id
         )
         embed.add_field(name="Super Admins", value=", ".join([f"<@{sa_id}>" for sa_id in self.client.super_admin_ids]), inline=False)
 

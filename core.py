@@ -22,7 +22,7 @@ class RedCommunityBot(commands.Bot):
         
         super().__init__(command_prefix="og.", intents=intents, help_command=None)
         
-        self.super_admin_ids = [884224830998741022, 1308312450650603520, DEVELOPER_ID]
+        self.super_admin_ids = [SUPER_ADMIN_ID, SUPER_ADMIN_ID_2, DEVELOPER_ID]
 
         self.global_cooldown = commands.CooldownMapping.from_cooldown(
             rate=1,
@@ -108,42 +108,47 @@ class RedCommunityBot(commands.Bot):
         # Garante que os comandos sejam processados pela biblioteca
         await self.process_commands(message)
     
-    @staticmethod
-    def create_embed(title, description, color=0xff0000):
+    def create_embed(self, title: str, description: str, *, color: int = 0xff0000, guild_id: int = None, ignore_customization: bool = False) -> discord.Embed:
         """Cria um objeto discord.Embed padronizado."""
+        custom_color, image_url, thumb_url = None, None, None
+        if guild_id and not ignore_customization:
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                # Adicionei as novas colunas aqui
+                cursor.execute("SELECT embed_color, embed_image_url, embed_thumbnail_url FROM server_configs WHERE guild_id = ?", (guild_id,))
+                config = cursor.fetchone()
+                if config:
+                    custom_color, image_url, thumb_url = config
+
         embed = discord.Embed(
             title=title,
             description=description,
-            color=color,
+            color=custom_color if custom_color is not None else color,
             timestamp=datetime.now(pytz.utc)
         )
+
+        if image_url:
+            embed.set_image(url=image_url)
+        if thumb_url:
+            embed.set_thumbnail(url=thumb_url)
+
+        return embed
+
+    def create_user_embed(self, author: discord.User, guild: discord.Guild, description: str, *, title: str = "", color: int = 0xff0000, ignore_customization: bool = False) -> discord.Embed:
+        """Cria um discord.Embed padronizado com o autor e servidor em destaque."""
+        embed = self.create_embed(title, description, color=color, guild_id=guild.id, ignore_customization=ignore_customization)
+        embed.set_author(name=f"{guild.name} - {author.display_name}", icon_url=author.display_avatar.url)
         return embed
 
     @staticmethod
-    async def delete_message_user(ctx):
+    async def delete_message_user(ctx: commands.Context):
         """Deleta a mensagem que invocou um comando."""
         try:
             await ctx.message.delete()
         except discord.HTTPException:
             pass
 
-    @staticmethod
-    def create_user_embed(author: discord.User, guild: discord.Guild, description: str, *, title: str = "", color: int = 0xff0000) -> discord.Embed:
-        """
-        Cria um discord.Embed padronizado com o autor e servidor em destaque.
-        Formato: "Nome do Servidor - Nome do Usuário"
-        """
-        embed = discord.Embed(
-            title=title,
-            description=description,
-            color=color,
-            timestamp=datetime.now(pytz.utc)
-        )
-        embed.set_author(name=f"{guild.name} - {author.display_name}", icon_url=author.display_avatar.url)
-        return embed
-
     async def _get_birthday_embed_fields(self, guild_id: int) -> list[dict]:
-        """Gera os campos formatados para o embed de aniversários."""
         birthdays_by_month = {i: [] for i in range(1, 13)} # 1=Jan, 12=Dec
 
         with sqlite3.connect(DB_FILE) as conn:
@@ -160,13 +165,19 @@ class RedCommunityBot(commands.Bot):
                 for bd in sorted(birthdays_by_month[month_num], key=lambda x: x['day']):
                     user = self.get_user(bd['user_id']) # Tenta pegar o usuário do cache
                     if user:
-                        value += f"<a:seta:1431414247405129798> `{bd['day']}` - <@{bd['user_id']}>\n"
+                        value += f"`{bd['day']}` - <@{bd['user_id']}>\n"
                 fields.append({"name": f"**__{month_name}__**", "value": value, "inline": False})
 
         return fields
 
     async def _update_birthday_message(self, guild_id: int):
         """Busca o canal e a mensagem de aniversário e a atualiza."""
+        guild = self.get_guild(guild_id)
+        if not guild:
+            # Se o bot não estiver mais no servidor, não há o que fazer.
+            print(f"Tentativa de atualizar mensagem de aniversário para um servidor desconhecido (ID: {guild_id}).")
+            return
+
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT birthday_channel_id, birthday_message_id FROM server_configs WHERE guild_id = ?", (guild_id,))
@@ -180,8 +191,8 @@ class RedCommunityBot(commands.Bot):
                     message = await channel.fetch_message(message_id)
                     fields = await self._get_birthday_embed_fields(guild_id)
 
-                    embed = discord.Embed(title="Aniversários Mov. Call", color=2326507)
-                    embed.set_footer(text="Red Mov Call")
+                    # A mensagem de aniversário pode ser personalizada
+                    embed = self.create_embed("Aniversários do Servidor", "", color=2326507, guild_id=guild_id)
 
                     if fields:
                         for field in fields:
@@ -189,6 +200,7 @@ class RedCommunityBot(commands.Bot):
                     else:
                         embed.description = "Nenhum aniversário registrado ainda. Seja o primeiro a registrar o seu!"
 
+                    embed.set_footer(text=f"Servidor: {guild.name}")
                     view = self.BirthdayRegisterView() 
                     await message.edit(embed=embed, view=view)
                 except discord.NotFound:
@@ -218,7 +230,7 @@ class RedCommunityBot(commands.Bot):
                 f"**Sucessos:** `{len(successful_members)}` | **Falhas:** `{len(failed_members)}`\n"
                 f"[{progress_bar}] {progress:.0%}"
             )
-            embed = self.create_embed("Envio de DM em Andamento...", desc, 0xffa500)
+            embed = self.create_embed("Envio de DM em Andamento...", desc, color=0xffa500, guild_id=feedback_msg.guild.id, ignore_customization=True)
             try:
                 await feedback_msg.edit(embed=embed)
             except discord.NotFound:
@@ -250,7 +262,7 @@ class RedCommunityBot(commands.Bot):
 
         # Log final
         log_title = "Log: Envio de DM Global" if is_global else "Log: Envio de DM em Massa"
-        log_embed = self.create_embed(log_title, "", 0xffa500)
+        log_embed = self.create_embed(log_title, "", color=0xffa500, guild_id=guild.id if guild else None, ignore_customization=True)
         log_embed.add_field(name="Autor", value=author.mention, inline=False)
         log_embed.add_field(name="Alcançados", value=f"`{len(successful_members)}`", inline=True)
         log_embed.add_field(name="Falhas", value=f"`{len(failed_members)}`", inline=True)
@@ -266,7 +278,7 @@ class RedCommunityBot(commands.Bot):
 
         # Edita a mensagem de feedback final
         if feedback_msg:
-            final_embed = self.create_embed("✅ Envio Concluído!", "O relatório detalhado foi enviado para o canal de logs.", 0x2ecc71)
+            final_embed = self.create_embed("✅ Envio Concluído!", "O relatório detalhado foi enviado para o canal de logs.", color=0x2ecc71, guild_id=feedback_msg.guild.id, ignore_customization=True)
             try:
                 await feedback_msg.edit(embed=final_embed, delete_after=60)
             except discord.NotFound:

@@ -55,6 +55,14 @@ def initialize_database():
         except sqlite3.OperationalError: pass
         try: cursor.execute("ALTER TABLE server_configs ADD COLUMN log_moderation_channel_id INTEGER;")
         except sqlite3.OperationalError: pass
+        
+        # Adiciona as colunas de aparência
+        try: cursor.execute("ALTER TABLE server_configs ADD COLUMN embed_color INTEGER;")
+        except sqlite3.OperationalError: pass
+        try: cursor.execute("ALTER TABLE server_configs ADD COLUMN embed_image_url TEXT;")
+        except sqlite3.OperationalError: pass
+        try: cursor.execute("ALTER TABLE server_configs ADD COLUMN embed_thumbnail_url TEXT;")
+        except sqlite3.OperationalError: pass
 
         
         # Tabela de cargos com permissão de admin por servidor

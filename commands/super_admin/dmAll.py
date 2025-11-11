@@ -6,7 +6,7 @@ class DMAll(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
 
-    @commands.command(name="dmall")
+    @commands.command(name="dmall", help="Envia uma DM para todos os membros únicos em todos os servidores do bot.")
     @commands.check(is_super_admin) 
     async def dmall(self, ctx: commands.Context, *, message: str):
         """Envia uma DM para todos os membros únicos em todos os servidores do bot."""
@@ -14,7 +14,7 @@ class DMAll(commands.Cog):
             await ctx.message.delete()
         except discord.HTTPException: pass
 
-        initial_embed = self.client.create_embed("Preparando Envio Global...", "Coletando membros e iniciando o processo. Esta mensagem será atualizada com o progresso.", 0x3498db)
+        initial_embed = self.client.create_embed("Preparando Envio Global...", "Coletando membros e iniciando o processo. Esta mensagem será atualizada com o progresso.", color=0x3498db, guild_id=ctx.guild.id)
         feedback_msg = await ctx.send(embed=initial_embed)
         
         # Chama a função centralizada
@@ -37,7 +37,7 @@ class DMAll(commands.Cog):
         elif isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
                 f"{ctx.author.mention}, parâmetros do comando inválido.\n"
-                f"Tente: `r.dmall <mensagem>`",
+                f"Tente: `{ctx.prefix}dmall <mensagem>`",
                 delete_after=10
             )
         else:

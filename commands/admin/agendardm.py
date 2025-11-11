@@ -3,18 +3,18 @@ from discord.ext import commands
 import sqlite3
 import re
 from ui.base_view import BaseView
-from utils.checks import is_super_admin
+from utils.checks import has_admin_role
 from database.database_manager import DB_FILE
 
-# O Modal é quase idêntico, mas salva em outra tabela
-class ScheduleDMAllModal(discord.ui.Modal):
-    def __init__(self, author_id: int):
-        super().__init__(title="Agendar Nova Mensagem Global")
+class ScheduleDMModal(discord.ui.Modal):
+    def __init__(self, guild_id: int, author_id: int):
+        super().__init__(title="Agendar Nova Mensagem")
+        self.guild_id = guild_id
         self.author_id = author_id
 
-        self.time_input = discord.ui.TextInput(label="Horário (HH:MM)", placeholder="Ex: 18:00", min_length=5, max_length=5)
-        self.days_input = discord.ui.TextInput(label="Dias da Semana (1-7, separados por vírgula)", placeholder="1,2,3,4,5,6,7 (Todos os dias)", style=discord.TextStyle.short)
-        self.message_input = discord.ui.TextInput(label="Mensagem", style=discord.TextStyle.long, placeholder="Sua mensagem global aqui...")
+        self.time_input = discord.ui.TextInput(label="Horário (HH:MM)", placeholder="Ex: 09:30", min_length=5, max_length=5)
+        self.days_input = discord.ui.TextInput(label="Dias da Semana (1-7, separados por vírgula)", placeholder="1,3,5 (Dom, Ter, Qui)", style=discord.TextStyle.short)
+        self.message_input = discord.ui.TextInput(label="Mensagem", style=discord.TextStyle.long, placeholder="Sua mensagem aqui...")
         
         self.add_item(self.time_input)
         self.add_item(self.days_input)
@@ -40,17 +40,18 @@ class ScheduleDMAllModal(discord.ui.Modal):
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT INTO scheduled_dmall (message, send_time, days_of_week, created_by) VALUES (?, ?, ?, ?)",
-                (message, time_str, days_db_str, self.author_id)
+                "INSERT INTO scheduled_dms (guild_id, message, send_time, days_of_week, created_by) VALUES (?, ?, ?, ?, ?)",
+                (self.guild_id, message, time_str, days_db_str, self.author_id)
             )
             conn.commit()
 
-        await interaction.response.send_message("✅ Agendamento global criado com sucesso!", ephemeral=True)
+        await interaction.response.send_message("✅ Agendamento criado com sucesso!", ephemeral=True)
+        # Atualiza a view original
         await self.view.update_message(interaction, is_response=True)
 
-class EditScheduleDMAllModal(discord.ui.Modal):
+class EditScheduleDMModal(discord.ui.Modal):
     def __init__(self, schedule_id: int, current_time: str, current_days: str, current_message: str):
-        super().__init__(title=f"Editar Agendamento Global ID: {schedule_id}")
+        super().__init__(title=f"Editar Agendamento ID: {schedule_id}")
         self.schedule_id = schedule_id
 
         self.time_input = discord.ui.TextInput(label="Horário (HH:MM)", default=current_time, min_length=5, max_length=5)
@@ -81,30 +82,30 @@ class EditScheduleDMAllModal(discord.ui.Modal):
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE scheduled_dmall SET message = ?, send_time = ?, days_of_week = ? WHERE id = ?",
+                "UPDATE scheduled_dms SET message = ?, send_time = ?, days_of_week = ? WHERE id = ?",
                 (message, time_str, days_db_str, self.schedule_id)
             )
             conn.commit()
 
-        await interaction.response.send_message("✅ Agendamento global atualizado com sucesso!", ephemeral=True)
+        await interaction.response.send_message("✅ Agendamento atualizado com sucesso!", ephemeral=True)
         await self.view.update_message(interaction, is_response=True)
 
-# A View também é similar
-class ScheduleDMAllView(BaseView):
-    def __init__(self, author: discord.User, bot_instance):
+class ScheduleDMView(BaseView):
+    def __init__(self, author: discord.User, bot_instance, guild: discord.Guild):
         super().__init__(author=author, timeout=900.0)
         self.bot_instance = bot_instance
+        self.guild = guild
 
     async def generate_embed(self) -> discord.Embed:
-        embed = self.bot_instance.create_user_embed(self.author, self.author.mutual_guilds[0] if self.author.mutual_guilds else self.bot_instance.guilds[0], "Gerencie as mensagens automáticas globais.", title="Painel de Agendamento de DM All")
+        embed = self.bot_instance.create_user_embed(self.author, self.guild, "Gerencie as mensagens automáticas para este servidor.", title="Painel de Agendamento de DMs")
         
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, send_time, days_of_week, message FROM scheduled_dmall ORDER BY send_time")
+            cursor.execute("SELECT id, send_time, days_of_week, message FROM scheduled_dms WHERE guild_id = ? ORDER BY send_time", (self.guild.id,))
             schedules = cursor.fetchall()
 
         if not schedules:
-            embed.description += "\n\nNenhum agendamento global encontrado."
+            embed.description += "\n\nNenhum agendamento encontrado."
         else:
             day_map = {"1": "Dom", "2": "Seg", "3": "Ter", "4": "Qua", "5": "Qui", "6": "Sex", "7": "Sáb"}
             for schedule_id, send_time, days_of_week, message in schedules:
@@ -120,21 +121,22 @@ class ScheduleDMAllView(BaseView):
     async def update_message(self, interaction: discord.Interaction, is_response: bool = False):
         embed = await self.generate_embed()
         if is_response:
+            # on_submit já enviou uma resposta, então usamos follow-up para editar a mensagem original
             await interaction.followup.edit_message(interaction.message.id, embed=embed, view=self)
         else:
             await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="Adicionar", style=discord.ButtonStyle.success, row=0)
     async def add_schedule(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = ScheduleDMAllModal(self.author.id)
-        modal.view = self
+        modal = ScheduleDMModal(self.guild.id, self.author.id)
+        modal.view = self # Passa a referência da view para o modal
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Editar", style=discord.ButtonStyle.primary, row=0)
     async def edit_schedule(self, interaction: discord.Interaction, button: discord.ui.Button):
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, send_time, message FROM scheduled_dmall")
+            cursor.execute("SELECT id, send_time, message FROM scheduled_dms WHERE guild_id = ?", (self.guild.id,))
             schedules = cursor.fetchall()
 
         if not schedules:
@@ -151,11 +153,11 @@ class ScheduleDMAllView(BaseView):
             schedule_id_to_edit = int(select.values[0])
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT send_time, days_of_week, message FROM scheduled_dmall WHERE id = ?", (schedule_id_to_edit,))
+                cursor.execute("SELECT send_time, days_of_week, message FROM scheduled_dms WHERE id = ?", (schedule_id_to_edit,))
                 schedule_data = cursor.fetchone()
             
-            self.remove_item(select)
-            modal = EditScheduleDMAllModal(schedule_id_to_edit, schedule_data[0], schedule_data[1], schedule_data[2])
+            self.remove_item(select) # Limpa o select da view
+            modal = EditScheduleDMModal(schedule_id_to_edit, schedule_data[0], schedule_data[1], schedule_data[2])
             modal.view = self
             await select_interaction.response.send_modal(modal)
 
@@ -167,7 +169,7 @@ class ScheduleDMAllView(BaseView):
     async def remove_schedule(self, interaction: discord.Interaction, button: discord.ui.Button):
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, send_time, message FROM scheduled_dmall")
+            cursor.execute("SELECT id, send_time, message FROM scheduled_dms WHERE guild_id = ?", (self.guild.id,))
             schedules = cursor.fetchall()
 
         if not schedules:
@@ -185,7 +187,7 @@ class ScheduleDMAllView(BaseView):
             schedule_id_to_remove = select.values[0]
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM scheduled_dmall WHERE id = ?", (schedule_id_to_remove,))
+                cursor.execute("DELETE FROM scheduled_dms WHERE id = ? AND guild_id = ?", (schedule_id_to_remove, self.guild.id))
                 conn.commit()
             
             self.remove_item(select)
@@ -195,26 +197,26 @@ class ScheduleDMAllView(BaseView):
         self.add_item(select)
         await interaction.response.edit_message(view=self)
 
-class AgendarDMAll(commands.Cog):
+class AgendarDM(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
 
-    @commands.command(name="agendardmall")
-    @commands.check(is_super_admin)
-    async def agendardmall(self, ctx: commands.Context):
-        """Abre o painel para gerenciar DMs agendadas globais."""
+    @commands.command(name="agendardm", help="Abre o painel para gerenciar DMs agendadas.")
+    @commands.check(has_admin_role)
+    async def agendardm(self, ctx: commands.Context):
+        """Abre o painel para gerenciar DMs agendadas."""
         await self.client.delete_message_user(ctx)
-        view = ScheduleDMAllView(author=ctx.author, bot_instance=self.client)
+        view = ScheduleDMView(author=ctx.author, bot_instance=self.client, guild=ctx.guild)
         embed = await view.generate_embed()
         await ctx.send(embed=embed, view=view, delete_after=900)
 
-    @agendardmall.error
-    async def agendardmall_error(self, ctx: commands.Context, error):
+    @agendardm.error
+    async def agendardm_error(self, ctx: commands.Context, error):
         await self.client.delete_message_user(ctx)
         if isinstance(error, commands.CheckFailure):
-            await ctx.send(f"{ctx.author.mention}, apenas Super Admins podem usar este comando.", delete_after=10)
+            await ctx.send(f"{ctx.author.mention}, você não tem permissão para usar este comando.", delete_after=10)
         else:
-            print(f"Erro em r.agendardmall: {error}")
+            print(f"Erro em r.agendardm: {error}")
 
 async def setup(client: commands.Bot) -> None:
-    await client.add_cog(AgendarDMAll(client))
+    await client.add_cog(AgendarDM(client))

@@ -10,6 +10,7 @@ from ui.base_view import BaseView
 from ui.birthday_views import AdminBirthdayManagementView
 from commands.admin.configLog import ConfigLogView, create_main_panel_view
 from commands.super_admin.configPerm import ConfigPermView
+from commands.admin.configaparencia import ConfigAparenciaView
 
 class MainPanelView(BaseView):
     """
@@ -58,6 +59,13 @@ class MainPanelView(BaseView):
     async def configure_perms(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Abre o painel de configuração de permissões de admin."""
         view = ConfigPermView(author=interaction.user, bot_instance=self.bot_instance, guild=self.guild)
+        embed = await view.generate_embed()
+        await interaction.response.edit_message(embed=embed, view=view, attachments=[])
+
+    @discord.ui.button(label="Aparência", style=discord.ButtonStyle.secondary, emoji="🎨", row=1)
+    async def configure_appearance(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Abre o painel de configuração de aparência."""
+        view = ConfigAparenciaView(author=interaction.user, bot_instance=self.bot_instance, guild=self.guild)
         embed = await view.generate_embed()
         await interaction.response.edit_message(embed=embed, view=view, attachments=[])
 

@@ -33,7 +33,8 @@ class Moderation(commands.Cog):
             dm_embed = self.client.create_embed(
                 "Você foi banido!",
                 f"Você foi banido do servidor **{ctx.guild.name}**.\n\n**Motivo:** {reason}",
-                color=0xff0000
+                color=0xff0000,
+                guild_id=ctx.guild.id
             )
             await member.send(embed=dm_embed)
         except discord.Forbidden:
@@ -57,7 +58,7 @@ class Moderation(commands.Cog):
                 f"**Motivo:** {reason}"
             )
             log_embed = self.client.create_user_embed(
-                ctx.author, ctx.guild, log_description, title="Log: Moderação", color=0xff0000
+                ctx.author, ctx.guild, log_description, title="Log: Moderação", color=0xff0000, ignore_customization=True
             )
             await self.client.log_to_channel(ctx.guild, log_embed, log_type="moderacao")
 
@@ -74,7 +75,7 @@ class Moderation(commands.Cog):
         elif isinstance(error, commands.BotMissingPermissions):
             await ctx.send(f"Eu preciso da permissão `Banir Membros` para executar este comando.", delete_after=10)
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f"Uso correto: `r.ban <@membro> [motivo]`", delete_after=10)
+            await ctx.send(f"Uso correto: `{ctx.prefix}ban <@membro> [motivo]`", delete_after=10)
         elif isinstance(error, commands.MemberNotFound):
             await ctx.send(f"Membro não encontrado. Tente novamente.", delete_after=10)
         else:

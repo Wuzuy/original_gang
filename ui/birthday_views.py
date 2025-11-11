@@ -64,7 +64,7 @@ class BirthdayRegisterModal(discord.ui.Modal, title="Registrar seu Aniversário"
                 f"**Data:** `{day}/{month}`"
             )
             log_embed = self.bot_instance.create_user_embed(
-                interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0x2ecc71
+                interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0x2ecc71, ignore_customization=True
             )
             await self.bot_instance.log_to_channel(self.guild, log_embed, log_type="bot")
 
@@ -147,7 +147,7 @@ class AdminAddBirthdayModal(discord.ui.Modal, title="Adicionar Aniversário (Adm
                 f"**Nova Data:** `{day}/{month}`"
             )
             log_embed = self.bot_instance.create_user_embed(
-                interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0x00bfff
+                interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0x00bfff, ignore_customization=True
             )
             await self.bot_instance.log_to_channel(self.guild, log_embed, log_type="bot")
 
@@ -215,7 +215,7 @@ class AdminChangeBirthdayModal(discord.ui.Modal, title="Alterar Aniversário (Ad
                 f"**Nova Data:** `{day}/{month}`"
             )
             log_embed = self.bot_instance.create_user_embed(
-                interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0xf1c40f
+                interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0xf1c40f, ignore_customization=True
             )
             await self.bot_instance.log_to_channel(self.guild, log_embed, log_type="bot")
 
@@ -302,7 +302,7 @@ class AdminBirthdayManagementView(BaseView):
                         f"**Alvo:** {target_user.mention if target_user else f'ID: {user_id}'}"
                     )
                     log_embed = self.bot_instance.create_user_embed(
-                        select_interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0xe74c3c
+                        select_interaction.user, self.guild, log_description, title="Log: Gerenciamento de Aniversários", color=0xe74c3c, ignore_customization=True
                     )
                     await self.bot_instance.log_to_channel(self.guild, log_embed, log_type="bot")
 

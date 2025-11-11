@@ -25,7 +25,8 @@ class Help(commands.Cog):
             ctx.author,
             ctx.guild,
             "Aqui estão os comandos disponíveis para você, organizados por categoria.",
-            title="Central de Ajuda"
+            title="Central de Ajuda",
+            color=0x3498db # Uma cor azul padrão caso não haja customização
         )
         embed.set_thumbnail(url=self.client.user.display_avatar.url)
 

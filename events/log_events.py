@@ -26,7 +26,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         except Exception as e:
             print(f"Erro ao acessar o log de auditoria: {e}")
 
-        embed = self.client.create_embed("Log: Mensagem Apagada", f"Mensagem de {message.author.mention} foi apagada.", 0xe74c3c)
+        embed = self.client.create_embed("Log: Mensagem Apagada", f"Mensagem de {message.author.mention} foi apagada.", color=0xe74c3c, guild_id=message.guild.id, ignore_customization=True)
         embed.set_author(name=f"{message.author.name} ({message.author.id})", icon_url=message.author.display_avatar.url)
         embed.add_field(name="Autor", value=message.author.mention, inline=True)
         embed.add_field(name="Canal", value=message.channel.mention, inline=False)
@@ -43,7 +43,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.author.bot or not before.guild or before.content == after.content: return
 
-        embed = self.client.create_embed("Log: Mensagem Editada", f"[Ir para a mensagem]({after.jump_url})", 0xf1c40f)
+        embed = self.client.create_embed("Log: Mensagem Editada", f"Ir para a mensagem", color=0xf1c40f, guild_id=before.guild.id, ignore_customization=True)
         embed.set_author(name=f"{after.author.name} ({after.author.id})", icon_url=after.author.display_avatar.url)
         embed.add_field(name="Autor", value=after.author.mention, inline=False)
         embed.add_field(name="Canal", value=before.channel.mention, inline=False)
@@ -56,7 +56,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        embed = self.client.create_embed("Log: Membro Entrou", "", 0x2ecc71)
+        embed = self.client.create_embed("Log: Membro Entrou", "", color=0x2ecc71, guild_id=member.guild.id, ignore_customization=True)
         embed.set_author(name=f"{member.name} ({member.id})", icon_url=member.display_avatar.url)
         embed.add_field(name="Usuário", value=member.mention, inline=False)
         embed.add_field(name="Conta Criada em", value=discord.utils.format_dt(member.created_at, style='F'), inline=False)
@@ -91,7 +91,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         except Exception as e:
             print(f"Erro ao acessar o log de auditoria para on_member_remove: {e}")
 
-        embed = self.client.create_embed(log_title, "", 0xe74c3c)
+        embed = self.client.create_embed(log_title, "", color=0xe74c3c, guild_id=member.guild.id, ignore_customization=True)
         embed.set_author(name=f"{member.name} ({member.id})", icon_url=member.display_avatar.url)
         
         embed.add_field(name="Usuário", value=member.mention, inline=False)
@@ -132,7 +132,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         moderator_mention = moderator.mention if moderator else "Não identificado"
 
         if added_roles:
-            embed = self.client.create_embed("Log: Cargo Adicionado", "", 0x3498db)
+            embed = self.client.create_embed("Log: Cargo Adicionado", "", color=0x3498db, guild_id=after.guild.id, ignore_customization=True)
             embed.set_author(name=f"{after.name} ({after.id})", icon_url=after.display_avatar.url)
             embed.add_field(name="Usuário", value=after.mention, inline=False)
             embed.add_field(name="Cargo Adicionado", value=" ".join([r.mention for r in added_roles]), inline=False)
@@ -140,7 +140,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
             await self.client.log_to_channel(after.guild, embed, log_type="cargos")
 
         if removed_roles:
-            embed = self.client.create_embed("Log: Cargo Removido", "", 0xe67e22)
+            embed = self.client.create_embed("Log: Cargo Removido", "", color=0xe67e22, guild_id=after.guild.id, ignore_customization=True)
             embed.set_author(name=f"{after.name} ({after.id})", icon_url=after.display_avatar.url)
             embed.add_field(name="Usuário", value=after.mention, inline=False)
             embed.add_field(name="Cargo Removido", value=" ".join([r.mention for r in removed_roles]), inline=False)
@@ -161,7 +161,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         except Exception as e:
             print(f"Erro ao acessar o log de auditoria para on_guild_channel_create: {e}")
 
-        embed = self.client.create_embed("Log: Canal Criado", "", 0x2ecc71)
+        embed = self.client.create_embed("Log: Canal Criado", "", color=0x2ecc71, guild_id=channel.guild.id, ignore_customization=True)
         embed.add_field(name="Canal", value=channel.mention, inline=False)
         if moderator:
             embed.add_field(name="Criado por", value=moderator.mention, inline=False)
@@ -182,7 +182,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         except Exception as e:
             print(f"Erro ao acessar o log de auditoria para on_guild_channel_delete: {e}")
 
-        embed = self.client.create_embed("Log: Canal Deletado", "", 0xe74c3c)
+        embed = self.client.create_embed("Log: Canal Deletado", "", color=0xe74c3c, guild_id=channel.guild.id, ignore_customization=True)
         embed.add_field(name="Nome", value=f"`{channel.name}`", inline=True)
         if moderator:
             embed.add_field(name="Deletado por", value=moderator.mention, inline=True)
@@ -201,7 +201,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
                         break
             except Exception: pass
 
-            embed = self.client.create_embed("Log: Canal Renomeado", "", 0xf1c40f)
+            embed = self.client.create_embed("Log: Canal Renomeado", "", color=0xf1c40f, guild_id=after.guild.id, ignore_customization=True)
             embed.add_field(name="Canal", value=after.mention, inline=False)
             embed.add_field(name="Nome Antigo", value=f"`{before.name}`", inline=True)
             embed.add_field(name="Nome Novo", value=f"`{after.name}`", inline=True)
@@ -223,7 +223,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         except Exception as e:
             print(f"Erro ao acessar o log de auditoria para on_guild_role_create: {e}")
 
-        embed = self.client.create_embed("Log: Cargo Criado", "", 0x2ecc71)
+        embed = self.client.create_embed("Log: Cargo Criado", "", color=0x2ecc71, guild_id=role.guild.id, ignore_customization=True)
         embed.add_field(name="Cargo", value=role.mention, inline=False)
         if moderator:
             embed.add_field(name="Criado por", value=moderator.mention, inline=False)
@@ -244,7 +244,7 @@ class LogEvents(commands.Cog, name="Eventos de Log"):
         except Exception as e:
             print(f"Erro ao acessar o log de auditoria para on_guild_role_delete: {e}")
 
-        embed = self.client.create_embed("Log: Cargo Deletado", "", 0xe74c3c)
+        embed = self.client.create_embed("Log: Cargo Deletado", "", color=0xe74c3c, guild_id=role.guild.id, ignore_customization=True)
         embed.add_field(name="Nome do Cargo", value=f"`{role.name}`", inline=False)
         if moderator:
             embed.add_field(name="Deletado por", value=moderator.mention, inline=False)
