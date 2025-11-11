@@ -259,11 +259,11 @@ class AdminBirthdayManagementView(BaseView):
     @discord.ui.button(label="Voltar ao Painel", style=discord.ButtonStyle.danger, row=2)
     async def go_back(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Retorna ao menu principal do painel."""
-        # Para evitar dependência circular, importamos aqui
-        from commands.admin.painel import MainPanelView
+        # Importação local para evitar dependência circular
+        from commands.admin.configLog import create_main_panel_view
 
         # Recria a view principal para resetar o estado
-        main_view = MainPanelView(author=self.author, bot_instance=self.bot_instance, guild=self.guild)
+        main_view = create_main_panel_view(author=interaction.user, bot_instance=self.bot_instance, guild=self.guild)
         attachments = []
         if main_view.original_file:
             attachments.append(main_view.original_file)

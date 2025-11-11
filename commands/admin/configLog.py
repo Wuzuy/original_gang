@@ -6,6 +6,16 @@ from utils.checks import has_admin_role
 from utils.constants import LOG_TYPES # Importa do novo local
 from ui.base_view import BaseView
 
+def create_main_panel_view(author: discord.User, bot_instance: commands.Bot, guild: discord.Guild):
+    """
+    Função auxiliar para evitar importação circular.
+    Cria e retorna uma instância da MainPanelView.
+    """
+    # Importação local para evitar dependência circular
+    from commands.admin.painel import MainPanelView
+    return MainPanelView(author=author, bot_instance=bot_instance, guild=guild)
+
+
 class ConfigLogView(BaseView):
     def __init__(self, author: discord.User, bot_instance, guild: discord.Guild):
         super().__init__(author=author, timeout=900.0)
@@ -19,9 +29,8 @@ class ConfigLogView(BaseView):
             super().__init__(label="Voltar ao Painel", style=discord.ButtonStyle.danger, row=4)
 
         async def callback(self, interaction: discord.Interaction):
-            from commands.admin.painel import MainPanelView
             view: 'ConfigLogView' = self.view # type: ignore
-            main_view = MainPanelView(author=interaction.user, bot_instance=view.bot_instance, guild=view.guild)
+            main_view = create_main_panel_view(author=interaction.user, bot_instance=view.bot_instance, guild=view.guild)
             attachments = []
             if main_view.original_file:
                 attachments.append(main_view.original_file)

@@ -8,7 +8,7 @@ from ui.base_view import BaseView
 
 # Importa as views que serão usadas nos botões
 from ui.birthday_views import AdminBirthdayManagementView
-from commands.admin.configLog import ConfigLogView
+from commands.admin.configLog import ConfigLogView, create_main_panel_view
 from commands.super_admin.configPerm import ConfigPermView
 
 class MainPanelView(BaseView):
@@ -60,19 +60,6 @@ class MainPanelView(BaseView):
         view = ConfigPermView(author=interaction.user, bot_instance=self.bot_instance, guild=self.guild)
         embed = await view.generate_embed()
         await interaction.response.edit_message(embed=embed, view=view, attachments=[])
-
-    @discord.ui.button(label="Voltar", style=discord.ButtonStyle.danger, row=2)
-    async def go_back(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Retorna ao menu principal do painel."""
-        # Recria a view principal para resetar o estado
-        # Importa aqui para evitar dependência circular no nível do módulo
-        from commands.admin.painel import MainPanelView
-        
-        main_view = MainPanelView(author=interaction.user, bot_instance=self.bot_instance, guild=self.guild) # Usa o interaction.user
-        attachments = []
-        if main_view.original_file:
-            attachments.append(main_view.original_file)
-        await interaction.response.edit_message(embed=main_view.original_embed, view=main_view, attachments=attachments)
 
 
 class Painel(commands.Cog):

@@ -5,6 +5,15 @@ from database.database_manager import DB_FILE
 from utils.checks import is_super_admin
 from ui.base_view import BaseView
 
+def create_main_panel_view(author: discord.User, bot_instance: commands.Bot, guild: discord.Guild):
+    """
+    Função auxiliar para evitar importação circular.
+    Cria e retorna uma instância da MainPanelView.
+    """
+    # Importação local para evitar dependência circular
+    from commands.admin.painel import MainPanelView
+    return MainPanelView(author=author, bot_instance=bot_instance, guild=guild)
+
 PERM_TYPES = {
     "admin": {"name": "Admin", "table": "perm_roles", "description": "Cargos com acesso a comandos administrativos."},
     "moderador": {"name": "Moderador", "table": "mod_roles", "description": "Cargos com acesso a comandos de moderação (ban, kick, etc.)."}
@@ -16,6 +25,7 @@ class ConfigPermView(BaseView):
         self.bot_instance = bot_instance
         self.guild = guild
         self.add_item(self.PermTypeSelect())
+        self.add_item(self.BackButton())
 
     async def generate_embed(self) -> discord.Embed:
         embed = self.bot_instance.create_user_embed(self.author, self.guild, "Configure os cargos de permissão do bot.", title="Painel de Configuração de Permissões")
@@ -36,6 +46,18 @@ class ConfigPermView(BaseView):
         embed = await self.generate_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
+    class BackButton(discord.ui.Button):
+        def __init__(self):
+            super().__init__(label="Voltar ao Painel", style=discord.ButtonStyle.danger, row=4)
+
+        async def callback(self, interaction: discord.Interaction):
+            view: 'ConfigPermView' = self.view # type: ignore
+            main_view = create_main_panel_view(author=interaction.user, bot_instance=view.bot_instance, guild=view.guild)
+            attachments = []
+            if main_view.original_file:
+                attachments.append(main_view.original_file)
+            await interaction.response.edit_message(embed=main_view.original_embed, view=main_view, attachments=attachments)
+
     class PermTypeSelect(discord.ui.Select):
         def __init__(self):
             options = [discord.SelectOption(label=info["name"], value=key, description=info["description"]) for key, info in PERM_TYPES.items()]
@@ -43,51 +65,35 @@ class ConfigPermView(BaseView):
 
         async def callback(self, interaction: discord.Interaction):
             view: 'ConfigPermView' = self.view
-            perm_type = self.values[0]
-            
-            # Limpa itens antigos e adiciona os novos
-            view.clear_items()
-            view.add_item(view.PermTypeSelect()) # Mantém o seletor de tipo
-            view.add_item(view.RoleSelect(perm_type))
-            view.add_item(view.RoleRemoveSelect(perm_type))
-            
-            await interaction.response.edit_message(view=view)
+            perm_type_key = self.values[0]
 
-    class RoleSelect(discord.ui.RoleSelect):
-        def __init__(self, perm_type: str):
-            self.perm_type = perm_type
-            self.table_name = PERM_TYPES[perm_type]["table"]
-            super().__init__(placeholder=f"Adicionar cargos de '{PERM_TYPES[perm_type]['name']}'...", min_values=1, max_values=10)
+            # Remove o seletor de cargos antigo, se houver
+            for item in view.children:
+                if isinstance(item, view.RoleMultiSelect):
+                    view.remove_item(item)
 
-        async def callback(self, interaction: discord.Interaction):
-            view: 'ConfigPermView' = self.view
-            with sqlite3.connect(DB_FILE) as conn:
-                cursor = conn.cursor()
-                for role in self.values:
-                    cursor.execute(f"INSERT OR IGNORE INTO {self.table_name} (guild_id, role_id) VALUES (?, ?)", (view.guild.id, role.id))
-                conn.commit()
-            
-            # Limpa a view e recria o estado inicial
-            view.clear_items()
-            view.add_item(view.PermTypeSelect())
-            await view.update_message(interaction)
+            view.add_item(view.RoleMultiSelect(perm_type_key))
+            await interaction.response.edit_message(view=view) # Apenas atualiza a view com o novo seletor
 
-    class RoleRemoveSelect(discord.ui.RoleSelect):
-        def __init__(self, perm_type: str):
-            self.perm_type = perm_type
-            self.table_name = PERM_TYPES[perm_type]["table"]
-            super().__init__(placeholder=f"Remover cargos de '{PERM_TYPES[perm_type]['name']}'...", min_values=1, max_values=10)
+    class RoleMultiSelect(discord.ui.RoleSelect):
+        def __init__(self, perm_type_key: str):
+            self.perm_type_key = perm_type_key
+            self.table_name = PERM_TYPES[perm_type_key]["table"]
+            super().__init__(placeholder=f"Gerenciar cargos de '{PERM_TYPES[perm_type_key]['name']}'...", min_values=0, max_values=25)
 
         async def callback(self, interaction: discord.Interaction):
             view: 'ConfigPermView' = self.view
+            selected_role_ids = {role.id for role in self.values}
+
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
-                for role in self.values:
-                    cursor.execute(f"DELETE FROM {self.table_name} WHERE guild_id = ? AND role_id = ?", (view.guild.id, role.id))
+                # Remove todos os cargos para este tipo de permissão e guild
+                cursor.execute(f"DELETE FROM {self.table_name} WHERE guild_id = ?", (view.guild.id,))
+                # Insere os cargos que foram selecionados na view
+                if selected_role_ids:
+                    cursor.executemany(f"INSERT INTO {self.table_name} (guild_id, role_id) VALUES (?, ?)", [(view.guild.id, role_id) for role_id in selected_role_ids])
                 conn.commit()
 
-            view.clear_items()
-            view.add_item(view.PermTypeSelect())
             await view.update_message(interaction)
 
 class ConfigPerm(commands.Cog):
