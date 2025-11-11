@@ -11,4 +11,4 @@ if __name__ == "__main__":
     else:
         bot = RedCommunityBot()
         bot.run(DISCORD_TOKEN)
-# Wuzuy Teste 2
+# Wuzuy Teste 3
