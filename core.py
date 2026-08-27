@@ -22,7 +22,7 @@ class RedCommunityBot(commands.Bot):
         
         super().__init__(command_prefix="og.", intents=intents, help_command=None)
         
-        self.super_admin_ids = [SUPER_ADMIN_ID, SUPER_ADMIN_ID_2, DEVELOPER_ID]
+        self.super_admin_ids = [int(x.strip()) for x in os.getenv("SUPER_ADMIN_IDS", "").split(",") if x.strip()]
 
         self.global_cooldown = commands.CooldownMapping.from_cooldown(
             rate=1,
