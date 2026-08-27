@@ -21,8 +21,8 @@ Bot de comunidade para servidores Discord, desenvolvido em Python com `discord.p
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/Wuzuy/original_gang.git
-   cd original_gang
+   git clone https://github.com/Wuzuy/discord-community-bot.git
+   cd discord-community-bot
    ```
 
 2. Instale as dependências:
